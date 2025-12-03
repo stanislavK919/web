@@ -1,7 +1,7 @@
 import sqlite3
 
 
-conn = sqlite3.connect('todo.db')
+conn = sqlite3.connect('../todo.db')
 cursor = conn.cursor()
 
 cursor.execute('CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)')
