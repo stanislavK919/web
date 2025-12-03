@@ -1,0 +1,185 @@
+openapi: 3.0.3
+info:
+  title: Todo System API
+  description: API для керування списком завдань (Todo List).
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+paths:
+  /todos:
+    get:
+      summary: Отримати список усіх завдань
+      tags:
+        - Todos
+      responses:
+        '200':
+          description: Успішне отримання списку
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TodoResponse'
+    post:
+      summary: Створити нове завдання
+      tags:
+        - Todos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTodoDto'
+      responses:
+        '201':
+          description: Завдання успішно створено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponse'
+        '400':
+          description: Невірні вхідні дані
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /todos/{id}:
+    parameters:
+      - name: id
+        in: path
+        description: Унікальний ідентифікатор завдання
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      summary: Отримати деталі завдання за ID
+      tags:
+        - Todos
+      responses:
+        '200':
+          description: Деталі завдання
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponse'
+        '404':
+          description: Завдання не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      summary: Оновити існуюче завдання
+      description: Оновлює лише передані поля (наприклад, зміна статусу виконання)
+      tags:
+        - Todos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTodoDto'
+      responses:
+        '200':
+          description: Завдання успішно оновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponse'
+        '400':
+          description: Невірні дані для оновлення
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Завдання не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Видалити завдання
+      tags:
+        - Todos
+      responses:
+        '204':
+          description: Завдання успішно видалено (немає контенту)
+        '404':
+          description: Завдання не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    # Базова схема відповіді (Entity)
+    TodoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        title:
+          type: string
+          example: "Купити продукти"
+        description:
+          type: string
+          example: "Молоко, хліб, яйця"
+        is_completed:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+
+    # DTO для створення (POST)
+    CreateTodoDto:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: "Записатися до лікаря"
+        description:
+          type: string
+          example: "Стоматолог на 15:00"
+
+    # DTO для оновлення (PATCH)
+    UpdateTodoDto:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: "Записатися до терапевта"
+        description:
+          type: string
+          example: "Перенесли на 16:00"
+        is_completed:
+          type: boolean
+          example: true
+
+    # Уніфікована схема помилки
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 404
+        message:
+          type: string
+          example: "Resource not found"
+        details:
+          type: string
+          nullable: true
+          example: "Todo with id 123 does not exist"
