@@ -1,13 +1,169 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>ToDo Flask App</title>
-  <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+    <meta charset="UTF-8">
+    <title>Resilient Todo Client</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
+        .banner { padding: 15px; margin-bottom: 20px; text-align: center; font-weight: bold; border-radius: 5px; display: none; }
+        .banner.error { background-color: #ffe6e6; color: #cc0000; border: 1px solid #cc0000; }
+        .controls { border: 1px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9; }
+        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #logs { margin-top: 20px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; border-top: 1px solid #eee; }
+        .log-entry { padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+        .success { color: green; }
+        .error { color: red; }
+        .warn { color: orange; }
+    </style>
 </head>
 <body>
-  <h1>📋 Список завдань</h1>
-  <button id="load">Load items</button>
-  <ul id="list"></ul>
+
+    <div id="status-banner" class="banner error">System Unstable - Retrying...</div>
+
+    <div class="controls">
+        <h2>Create Todo (Resilient)</h2>
+        <input type="text" id="title-input" placeholder="Buy Milk" value="Buy Milk">
+        <button id="submit-btn" onclick="handleSubmit()">Create Task</button>
+        <p><small>Spam click to test Idempotency & Rate Limit.</small></p>
+    </div>
+
+    <div id="logs"></div>
+
+<script>
+    // --- UTILS ---
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const backoff = (attempt) => 500 * (2 ** attempt) + Math.floor(Math.random() * 100); // Exponential + Jitter
+    
+    // Генерує хеш для Idempotency Key
+    async function generateIdempotencyKey(payload) {
+        const msg = JSON.stringify(payload);
+        const encoder = new TextEncoder();
+        const data = encoder.encode(msg);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // --- RESILIENT FETCH ---
+    async function fetchWithResilience(url, options = {}) {
+        const { retries = 3, retryCount = 0, ...fetchOptions } = options;
+        
+        // Timeout control
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 sec timeout
+        fetchOptions.signal = controller.signal;
+
+        try {
+            const response = await fetch(url, fetchOptions);
+            clearTimeout(timeoutId);
+
+            // 1. RATE LIMIT (429) -> Wait & Retry
+            if (response.status === 429 && retries > 0) {
+                const waitSec = parseInt(response.headers.get('Retry-After') || '1');
+                log(`⚠️ Rate Limit (429). Waiting ${waitSec}s...`, 'warn');
+                await sleep(waitSec * 1000);
+                return fetchWithResilience(url, { ...options, retries: retries - 1 });
+            }
+
+            // 2. SERVER ERRORS (5xx) -> Backoff & Retry
+            if (response.status >= 500 && retries > 0) {
+                const delay = backoff(retryCount);
+                log(`⚠️ Server Error (${response.status}). Retrying in ${delay}ms...`, 'warn');
+                await sleep(delay);
+                return fetchWithResilience(url, { ...options, retries: retries - 1, retryCount: retryCount + 1 });
+            }
+
+            return response;
+
+        } catch (err) {
+            clearTimeout(timeoutId);
+            // 3. NETWORK / TIMEOUT ERRORS -> Retry
+            if (retries > 0) {
+                const delay = backoff(retryCount);
+                const msg = err.name === 'AbortError' ? 'Timeout' : err.message;
+                log(`⚠️ Network Error (${msg}). Retrying in ${delay}ms...`, 'warn');
+                await sleep(delay);
+                return fetchWithResilience(url, { ...options, retries: retries - 1, retryCount: retryCount + 1 });
+            }
+            throw err;
+        }
+    }
+
+    // --- APP LOGIC ---
+    let consecutiveErrors = 0;
+
+    async function handleSubmit() {
+        const title = document.getElementById('title-input').value;
+        const btn = document.getElementById('submit-btn');
+        const banner = document.getElementById('status-banner');
+        
+        const payload = { title, priority: 'normal' };
+        
+        // Генеруємо ключ. Якщо дані ті самі -> ключ той самий.
+        const idempotencyKey = await generateIdempotencyKey(payload);
+        const requestId = crypto.randomUUID(); // Client-side correlation ID
+
+        log(`🚀 Sending: "${title}" (IDEM-KEY: ${idempotencyKey.substr(0,8)}...)`);
+
+        try {
+            const res = await fetchWithResilience('http://localhost:5000/todos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Idempotency-Key': idempotencyKey,
+                    'X-Request-Id': requestId
+                },
+                body: JSON.stringify(payload),
+                retries: 3 // Вмикаємо логіку ретраїв
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                log(`✅ Success! Task ID: ${data.id} ${data.cached ? '(Cached)' : ''}`, 'success');
+                consecutiveErrors = 0;
+                banner.style.display = 'none';
+            } else {
+                throw new Error(data.error || `Status ${res.status}`);
+            }
+
+        } catch (e) {
+            log(`❌ Failed permanently: ${e.message}`, 'error');
+            consecutiveErrors++;
+            
+            // Degraded Mode: Якщо помилок забагато, показуємо банер
+            if (consecutiveErrors >= 2) {
+                banner.style.display = 'block';
+                banner.innerText = `⚠️ System Unstable (${consecutiveErrors} failures). Functionality limited.`;
+                btn.disabled = true;
+                setTimeout(() => { 
+                    btn.disabled = false; 
+                    banner.style.display = 'none';
+                    consecutiveErrors = 0;
+                }, 5000); // 5 sec cooldown
+            }
+        }
+    }
+
+    function log(msg, type = '') {
+        const logs = document.getElementById('logs');
+        const div = document.createElement('div');
+        div.className = `log-entry ${type}`;
+        div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logs.prepend(div);
+    }
+    
+    // Health Check Polling (для перевірки таймауту)
+    setInterval(async () => {
+        try {
+            const controller = new AbortController();
+            setTimeout(() => controller.abort(), 1000); // 1s timeout
+            await fetch('http://localhost:5000/health', { signal: controller.signal });
+        } catch(e) {
+             // Тиха перевірка, логуємо тільки якщо цікаво
+        }
+    }, 5000);
+
+</script>
 </body>
 </html>
