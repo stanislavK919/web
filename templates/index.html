@@ -1,87 +1,231 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Resilient Todo Client</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My ToDo List</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
-        .banner { padding: 15px; margin-bottom: 20px; text-align: center; font-weight: bold; border-radius: 5px; display: none; }
-        .banner.error { background-color: #ffe6e6; color: #cc0000; border: 1px solid #cc0000; }
-        .controls { border: 1px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9; }
-        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        #logs { margin-top: 20px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; border-top: 1px solid #eee; }
-        .log-entry { padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
-        .success { color: green; }
-        .error { color: red; }
-        .warn { color: orange; }
+        :root {
+            --primary: #6366f1; /* Indigo */
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            padding-top: 50px;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: fit-content;
+        }
+
+        /* Header */
+        .header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 { margin: 0; font-size: 20px; font-weight: 600; }
+
+        .status-badge {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: #f1f5f9;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .dot { width: 8px; height: 8px; background: #ccc; border-radius: 50%; }
+        .dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .dot.offline { background: var(--danger); }
+
+        /* Input Area */
+        .input-area {
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+            background: #f8fafc;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: var(--primary); }
+
+        button#add-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button#add-btn:hover { opacity: 0.9; }
+        button:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+        /* Banner (Error/Warn) */
+        .system-banner {
+            background: #fff1f2;
+            color: var(--danger);
+            font-size: 13px;
+            padding: 10px 24px;
+            display: none;
+            border-bottom: 1px solid #fecdd3;
+        }
+
+        /* Task List */
+        .task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .task-item {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+        .task-item:last-child { border-bottom: none; }
+        .task-item:hover { background: #f8fafc; }
+
+        .task-content { font-size: 15px; }
+        .task-meta { font-size: 11px; color: var(--text-muted); background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+        .task-meta.cached { background: #dcfce7; color: #166534; }
+
+        /* Tech Logs (Hidden details) */
+        details {
+            padding: 10px 24px;
+            background: #1e293b;
+            color: #94a3b8;
+            font-size: 12px;
+            border-top: 1px solid var(--border);
+        }
+        summary { cursor: pointer; outline: none; list-style: none; }
+        #logs {
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            max-height: 150px;
+            overflow-y: auto;
+            color: #22c55e;
+        }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 2px; }
+        .log-entry.warn { color: #facc15; }
+        .log-entry.error { color: #f87171; }
+
     </style>
 </head>
 <body>
 
-    <div id="status-banner" class="banner error">System Unstable - Retrying...</div>
+    <div class="app-wrapper">
+        <div class="header">
+            <h1>✅ Завдання</h1>
+            <div class="status-badge">
+                <div id="health-dot" class="dot"></div>
+                <span id="health-text">Connecting...</span>
+            </div>
+        </div>
 
-    <div class="controls">
-        <h2>Create Todo (Resilient)</h2>
-        <input type="text" id="title-input" placeholder="Buy Milk" value="Buy Milk">
-        <button id="submit-btn" onclick="handleSubmit()">Create Task</button>
-        <p><small>Spam click to test Idempotency & Rate Limit.</small></p>
+        <div id="status-banner" class="system-banner">
+            ⚠️ Система перевантажена. Зачекайте хвилинку...
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="task-input" placeholder="Що плануєте зробити?" onkeypress="handleEnter(event)">
+            <button id="add-btn" onclick="addTask()">Додати</button>
+        </div>
+
+        <ul id="todo-list" class="task-list">
+            </ul>
+
+        <details>
+            <summary>🛠 Technical Logs (Click to expand)</summary>
+            <div id="logs"></div>
+        </details>
     </div>
 
-    <div id="logs"></div>
-
 <script>
-    // --- UTILS ---
+    // --- 1. CORE UTILS (Backoff, Sleep, Hash) ---
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-    const backoff = (attempt) => 500 * (2 ** attempt) + Math.floor(Math.random() * 100); // Exponential + Jitter
-    
-    // Генерує хеш для Idempotency Key
+    const backoff = (attempt) => 500 * (2 ** attempt) + Math.floor(Math.random() * 100);
+
     async function generateIdempotencyKey(payload) {
         const msg = JSON.stringify(payload);
-        const encoder = new TextEncoder();
-        const data = encoder.encode(msg);
+        const data = new TextEncoder().encode(msg);
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
         return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // --- RESILIENT FETCH ---
+    // --- 2. RESILIENT FETCH ENGINE ---
     async function fetchWithResilience(url, options = {}) {
         const { retries = 3, retryCount = 0, ...fetchOptions } = options;
-        
-        // Timeout control
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 sec timeout
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
         fetchOptions.signal = controller.signal;
 
         try {
             const response = await fetch(url, fetchOptions);
             clearTimeout(timeoutId);
 
-            // 1. RATE LIMIT (429) -> Wait & Retry
+            // Rate Limit (429) -> Retry-After
             if (response.status === 429 && retries > 0) {
                 const waitSec = parseInt(response.headers.get('Retry-After') || '1');
-                log(`⚠️ Rate Limit (429). Waiting ${waitSec}s...`, 'warn');
+                log(`⏳ Rate Limit. Waiting ${waitSec}s...`, 'warn');
                 await sleep(waitSec * 1000);
                 return fetchWithResilience(url, { ...options, retries: retries - 1 });
             }
 
-            // 2. SERVER ERRORS (5xx) -> Backoff & Retry
+            // Server Errors (5xx) -> Backoff
             if (response.status >= 500 && retries > 0) {
                 const delay = backoff(retryCount);
-                log(`⚠️ Server Error (${response.status}). Retrying in ${delay}ms...`, 'warn');
+                log(`🔥 Server Error (${response.status}). Retrying in ${delay}ms...`, 'warn');
                 await sleep(delay);
                 return fetchWithResilience(url, { ...options, retries: retries - 1, retryCount: retryCount + 1 });
             }
-
             return response;
 
         } catch (err) {
             clearTimeout(timeoutId);
-            // 3. NETWORK / TIMEOUT ERRORS -> Retry
             if (retries > 0) {
                 const delay = backoff(retryCount);
-                const msg = err.name === 'AbortError' ? 'Timeout' : err.message;
-                log(`⚠️ Network Error (${msg}). Retrying in ${delay}ms...`, 'warn');
+                log(`🔌 Network Error. Retrying in ${delay}ms...`, 'warn');
                 await sleep(delay);
                 return fetchWithResilience(url, { ...options, retries: retries - 1, retryCount: retryCount + 1 });
             }
@@ -89,23 +233,43 @@
         }
     }
 
-    // --- APP LOGIC ---
+    // --- 3. APPLICATION LOGIC ---
     let consecutiveErrors = 0;
 
-    async function handleSubmit() {
-        const title = document.getElementById('title-input').value;
-        const btn = document.getElementById('submit-btn');
-        const banner = document.getElementById('status-banner');
-        
-        const payload = { title, priority: 'normal' };
-        
-        // Генеруємо ключ. Якщо дані ті самі -> ключ той самий.
-        const idempotencyKey = await generateIdempotencyKey(payload);
-        const requestId = crypto.randomUUID(); // Client-side correlation ID
+    // Load tasks on startup
+    window.addEventListener('DOMContentLoaded', loadTasks);
 
-        log(`🚀 Sending: "${title}" (IDEM-KEY: ${idempotencyKey.substr(0,8)}...)`);
+    async function loadTasks() {
+        try {
+            const res = await fetch('http://localhost:5000/todos');
+            if (res.ok) {
+                const tasks = await res.json();
+                tasks.forEach(t => renderTask(t.title, t.cached));
+            }
+        } catch (e) {
+            log('Failed to load initial tasks', 'error');
+        }
+    }
+
+    async function addTask() {
+        const input = document.getElementById('task-input');
+        const btn = document.getElementById('add-btn');
+        const banner = document.getElementById('status-banner');
+        const title = input.value.trim();
+
+        if (!title) return;
+
+        // UI Loading
+        btn.disabled = true;
+        btn.innerText = "...";
+
+        const payload = { title, priority: 'normal' };
+        const idempotencyKey = await generateIdempotencyKey(payload);
+        const requestId = crypto.randomUUID();
 
         try {
+            log(`🚀 Creating: "${title}"`);
+
             const res = await fetchWithResilience('http://localhost:5000/todos', {
                 method: 'POST',
                 headers: {
@@ -114,13 +278,17 @@
                     'X-Request-Id': requestId
                 },
                 body: JSON.stringify(payload),
-                retries: 3 // Вмикаємо логіку ретраїв
+                retries: 3
             });
 
             const data = await res.json();
 
             if (res.ok) {
-                log(`✅ Success! Task ID: ${data.id} ${data.cached ? '(Cached)' : ''}`, 'success');
+                log(`✅ Success! ID: ${data.id}`, 'success');
+                renderTask(data.title, data.cached);
+
+                // Reset UI
+                input.value = '';
                 consecutiveErrors = 0;
                 banner.style.display = 'none';
             } else {
@@ -128,41 +296,67 @@
             }
 
         } catch (e) {
-            log(`❌ Failed permanently: ${e.message}`, 'error');
+            log(`❌ Error: ${e.message}`, 'error');
             consecutiveErrors++;
-            
-            // Degraded Mode: Якщо помилок забагато, показуємо банер
+
+            // Degraded Mode
             if (consecutiveErrors >= 2) {
                 banner.style.display = 'block';
-                banner.innerText = `⚠️ System Unstable (${consecutiveErrors} failures). Functionality limited.`;
-                btn.disabled = true;
-                setTimeout(() => { 
-                    btn.disabled = false; 
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = "Додати";
                     banner.style.display = 'none';
                     consecutiveErrors = 0;
-                }, 5000); // 5 sec cooldown
+                }, 5000);
+                return;
             }
         }
+
+        btn.disabled = false;
+        btn.innerText = "Додати";
+        input.focus();
+    }
+
+    function renderTask(title, isCached) {
+        const list = document.getElementById('todo-list');
+        const li = document.createElement('li');
+        li.className = 'task-item';
+
+        li.innerHTML = `
+            <span class="task-content">${title}</span>
+            ${isCached ? '<span class="task-meta cached">Cached</span>' : ''}
+        `;
+        // Add new items to the top
+        list.prepend(li);
+    }
+
+    function handleEnter(e) {
+        if (e.key === 'Enter') addTask();
     }
 
     function log(msg, type = '') {
         const logs = document.getElementById('logs');
         const div = document.createElement('div');
         div.className = `log-entry ${type}`;
-        div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        div.innerText = `> ${msg}`;
         logs.prepend(div);
     }
-    
-    // Health Check Polling (для перевірки таймауту)
+
+    // Health Check
     setInterval(async () => {
+        const dot = document.getElementById('health-dot');
+        const txt = document.getElementById('health-text');
         try {
             const controller = new AbortController();
-            setTimeout(() => controller.abort(), 1000); // 1s timeout
+            setTimeout(() => controller.abort(), 1000);
             await fetch('http://localhost:5000/health', { signal: controller.signal });
+            dot.className = 'dot online';
+            txt.innerText = 'Online';
         } catch(e) {
-             // Тиха перевірка, логуємо тільки якщо цікаво
+            dot.className = 'dot offline';
+            txt.innerText = 'Offline';
         }
-    }, 5000);
+    }, 4000);
 
 </script>
 </body>
