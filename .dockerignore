@@ -1,16 +1,12 @@
 venv/
 .venv/
 env/
-
 __pycache__/
 *.py[cod]
-
 *.db
 todo.db
-
 .git/
 .vscode/
 .idea/
-
 docs/
 README.md

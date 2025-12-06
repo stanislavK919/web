@@ -1,7 +1,6 @@
 from dataclasses import dataclass, asdict
 from typing import Optional, List
 
-# --- Що ми очікуємо від клієнта (Requests) ---
 @dataclass
 class CreateTodoDto:
     title: str
@@ -32,7 +31,6 @@ class UpdateTodoDto:
             is_completed=data.get('isCompleted')
         )
 
-# --- Як виглядає помилка (Standard Error) ---
 @dataclass
 class ErrorDetail:
     field: str

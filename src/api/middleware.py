@@ -14,14 +14,12 @@ RETRY_AFTER = 5
 
 
 def generate_request_id():
-    """Генерує або дістає X-Request-Id"""
     rid = request.headers.get('X-Request-Id') or str(uuid.uuid4())
     g.request_id = rid
     return rid
 
 
 def unified_error(error_type, code, details=None, status=400):
-    """Єдиний формат помилки"""
     return jsonify({
         "error": error_type,
         "code": code,

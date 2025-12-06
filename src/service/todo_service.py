@@ -8,7 +8,6 @@ class TodoService:
         self._init_db()
 
     def _init_db(self):
-        """Створює таблицю, якщо її немає"""
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
         cursor.execute('''
@@ -25,7 +24,7 @@ class TodoService:
 
     def get_all(self):
         conn = sqlite3.connect(self.db_name)
-        conn.row_factory = sqlite3.Row # Щоб звертатися по назвах колонок
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM todos")
         rows = cursor.fetchall()
@@ -58,7 +57,6 @@ class TodoService:
         if not current:
             return None
 
-        # Формуємо SQL динамічно (оновлюємо тільки те, що передали)
         fields = []
         values = []
         if dto.title is not None:

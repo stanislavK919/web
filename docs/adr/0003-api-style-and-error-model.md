@@ -1,6 +1,3 @@
-**Дата:** 2025-12-03
-**Статус:** Прийнято (Accepted)
-
 ### 1. Архітектурний стиль: REST API
 Ми дотримуємося принципів REST (Level 2 - Resources + Verbs):
 * **Ресурси:** Використовуємо іменники у множині для URL (наприклад, `/todos`, `/users`).
@@ -16,12 +13,12 @@
 
 ```json
 {
-  "error": "ValidationError",      // Тип помилки (readable code)
-  "code": "TITLE_REQUIRED",        // Унікальний код для frontend-логіки
-  "details": [                     // Масив деталей (опціонально)
+  "error": "ValidationError",      
+  "code": "TITLE_REQUIRED",        
+  "details": [                     
     {
-      "field": "title",            // Поле, де сталася помилка
-      "message": "Title cannot be empty" // Повідомлення для користувача
+      "field": "title",            
+      "message": "Title cannot be empty"
     }
   ]
 }

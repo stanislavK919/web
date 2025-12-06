@@ -118,7 +118,6 @@ paths:
 
 components:
   schemas:
-    # Базова схема відповіді (Entity)
     TodoResponse:
       type: object
       properties:
@@ -140,7 +139,6 @@ components:
           format: date-time
           example: "2023-10-27T10:00:00Z"
 
-    # DTO для створення (POST)
     CreateTodoDto:
       type: object
       required:
@@ -154,7 +152,6 @@ components:
           type: string
           example: "Стоматолог на 15:00"
 
-    # DTO для оновлення (PATCH)
     UpdateTodoDto:
       type: object
       properties:
@@ -169,7 +166,6 @@ components:
           type: boolean
           example: true
 
-    # Уніфікована схема помилки
     ErrorResponse:
       type: object
       properties:

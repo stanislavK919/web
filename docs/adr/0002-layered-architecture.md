@@ -1,8 +1,5 @@
 # 2. Шарова архітектура (Layered Architecture)
 
-**Date:** 2025-12-03
-**Status:** Accepted
-
 ### Структура шарів
 
 1.  **Presentation Layer (`src/api/`)**
