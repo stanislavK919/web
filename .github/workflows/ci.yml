@@ -1,0 +1,52 @@
+name: ToDo System CI/CD
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        # Додатково встановлюємо flake8 для лінтингу (перевірка стилю)
+        pip install flake8
+
+    - name: Lint with flake8
+      run: |
+        # зупинити збірку, якщо є синтаксичні помилки або невизначені імена
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # попередити про стилістичні помилки, але не зупиняти (exit-zero)
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Run Unit Tests
+      run: |
+        python -m unittest discover tests
+
+    - name: Build Docker image
+      run: docker build -t my-todo-app .
+
+    - name: Save Docker image to tarball
+      run: docker save my-todo-app > my-todo-image.tar
+
+    - name: Upload Docker Image Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-image
+        path: my-todo-image.tar
+        retention-days: 1
