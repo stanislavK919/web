@@ -1,6 +1,6 @@
 # ToDo System API
 
-![CI Status](https://github.com/ВАШ_НІКНЕЙМ/НАЗВА_РЕПОЗИТОРІЮ/actions/workflows/ci.yml/badge.svg)
+![CI Status](https://github.com/stanislavK919/web/actions/workflows/ci.yml/badge.svg)
 *(👆 Замініть посилання вище на ваш репозиторій: user/repo)*
 
 Це REST API для системи керування завданнями (ToDo), реалізоване на Python (Flask). Проєкт розроблено поетапно з використанням архітектури Modular Monolith, практик Resilience, Docker та CI/CD.
